@@ -1,0 +1,14 @@
+aiohttp==3.11.14
+aiostream==0.6.4
+fastapi==0.115.11
+jsonschema==4.23.0
+pandas==2.2.3
+pydantic==2.10.6
+pytest==8.3.5
+python-dotenv==1.0.1
+redis==5.2.1
+Requests==2.32.3
+sqlmodel==0.0.24
+streamlit==1.43.2
+uvicorn==0.34.0
+dotenv

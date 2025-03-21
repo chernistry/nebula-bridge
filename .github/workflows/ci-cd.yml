@@ -1,0 +1,67 @@
+# ==============================================================================
+# CI/CD Pipeline Configuration for GitHub Actions (Manual Trigger Only)
+# ==============================================================================
+
+name: CI/CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+
+      - name: Set up Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt 
+
+      - name: Run tests
+        run: pytest
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+
+      - name: SSH and Deploy Application
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -e  # Stop execution on any error
+            
+            echo "🔄 Connecting to VPS and updating project..."
+            cd /opt/my-app
+            git pull origin main
+
+            echo "🔄 Ensuring docker-compose permissions..."
+            chmod +x /usr/local/bin/docker-compose || true
+
+            echo "🚀 Restarting application using Docker Compose..."
+            docker-compose pull
+            docker-compose up -d --build
+
+  cleanup:
+    if: failure()  # Runs only if the workflow fails
+    needs: [ build-and-test, deploy ]  # Waits for all jobs to complete
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete workflow run if failed
+        run: |
+          gh run delete $GITHUB_RUN_ID --confirm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
